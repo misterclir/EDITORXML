@@ -5,6 +5,13 @@ const downloadButton = document.getElementById('downloadButton');
 const loadingBag = document.getElementById('loadingBag');
 const addModal = document.getElementById('addModal');
 const setHelmetSelect = document.getElementById('setHelmetSelect');
+const helmetSelectBtn = document.getElementById('helmetSelectBtn');
+const helmetSelectedImg = document.getElementById('helmetSelectedImg');
+const helmetSelectedFallback = document.getElementById('helmetSelectedFallback');
+const helmetSelectedLabel = document.getElementById('helmetSelectedLabel');
+const helmetDropdown = document.getElementById('helmetDropdown');
+const helmetDropdownSearch = document.getElementById('helmetDropdownSearch');
+const helmetDropdownList = document.getElementById('helmetDropdownList');
 const sectionOldConfig = document.getElementById('sectionOldConfig');
 const sectionNewConfig = document.getElementById('sectionNewConfig');
 const bagStatus = document.getElementById('bagStatus');
@@ -91,7 +98,7 @@ const COLUMNS_CONFIG = {
 // --- Event Listeners ---
 
 document.getElementById('uploadBag').addEventListener('change', handleFileUpload);
-addButton.addEventListener('click', () => { addModal.classList.remove('hidden'); });
+addButton.addEventListener('click', openAddModal);
 downloadButton.addEventListener('click', downloadXML);
 addDropInfoBtn.addEventListener('click', () => {
     dropInfos.push(createDefaultDropInfo());
@@ -112,8 +119,16 @@ function initApp() {
     initSidebarBehavior();
     initNavigation();
     initItemXmlSettings();
+    initHelmetDropdown();
     loadItemXmlFromCache();
     updateBulkBar();
+}
+
+function openAddModal() {
+    if (!addModal) return;
+    addModal.classList.remove('hidden');
+    syncHelmetUiFromSelect();
+    closeHelmetDropdown();
 }
 
 function isMobileViewport() {
@@ -285,6 +300,8 @@ function populateHelmetSelect() {
     if (!setHelmetSelect) return;
     if (!itemOptions || itemOptions.size === 0) {
         setHelmetSelect.innerHTML = '';
+        renderHelmetDropdownOptions('');
+        syncHelmetUiFromSelect();
         return;
     }
 
@@ -296,6 +313,162 @@ function populateHelmetSelect() {
     } else {
         setHelmetSelect.innerHTML = '';
     }
+
+    renderHelmetDropdownOptions('');
+    syncHelmetUiFromSelect();
+}
+
+function initHelmetDropdown() {
+    if (helmetSelectBtn) {
+        helmetSelectBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleHelmetDropdown();
+        });
+    }
+
+    if (helmetDropdownSearch) {
+        helmetDropdownSearch.addEventListener('input', () => {
+            renderHelmetDropdownOptions(helmetDropdownSearch.value);
+        });
+
+        helmetDropdownSearch.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            e.preventDefault();
+            closeHelmetDropdown();
+            if (helmetSelectBtn) helmetSelectBtn.focus();
+        });
+    }
+
+    if (helmetDropdown) {
+        helmetDropdown.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    document.addEventListener('click', () => closeHelmetDropdown());
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        closeHelmetDropdown();
+    });
+}
+
+function toggleHelmetDropdown() {
+    if (!helmetDropdown) return;
+    const isOpen = !helmetDropdown.classList.contains('hidden');
+    if (isOpen) closeHelmetDropdown();
+    else openHelmetDropdown();
+}
+
+function openHelmetDropdown() {
+    if (!helmetDropdown) return;
+    helmetDropdown.classList.remove('hidden');
+    if (helmetDropdownSearch) {
+        helmetDropdownSearch.value = '';
+        renderHelmetDropdownOptions('');
+        helmetDropdownSearch.focus();
+    }
+}
+
+function closeHelmetDropdown() {
+    if (!helmetDropdown) return;
+    helmetDropdown.classList.add('hidden');
+}
+
+function renderHelmetDropdownOptions(filterText) {
+    if (!helmetDropdownList) return;
+
+    if (!itemOptions || !itemOptions.has(7)) {
+        helmetDropdownList.innerHTML = '<div class="text-xs text-gray-500 px-2 py-3">Item.xml não carregado.</div>';
+        return;
+    }
+
+    const term = String(filterText || '').trim().toLowerCase();
+    const entries = Array.from(itemOptions.get(7).items.entries()).sort((a, b) => a[0] - b[0]);
+
+    const rows = entries.filter(([type, name]) => {
+        if (!term) return true;
+        const n = String(name || '').toLowerCase();
+        return n.includes(term) || String(type).includes(term);
+    });
+
+    if (rows.length === 0) {
+        helmetDropdownList.innerHTML = '<div class="text-xs text-gray-500 px-2 py-3">Nenhum resultado.</div>';
+        return;
+    }
+
+    const selected = setHelmetSelect ? String(setHelmetSelect.value || '') : '';
+    const frag = document.createDocumentFragment();
+
+    rows.forEach(([type, name]) => {
+        const typeStr = String(type);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-800 text-left transition-colors';
+        if (selected && selected === typeStr) btn.classList.add('bg-indigo-500/10');
+
+        const imgUrl = getItemImageUrl(7, type);
+
+        btn.innerHTML = `
+            <span class="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center overflow-hidden flex-none">
+                <img src="${imgUrl}" alt="" class="w-full h-full object-contain p-1" loading="lazy"
+                    onload="this.nextElementSibling.classList.add('hidden')"
+                    onerror="this.classList.add('hidden')">
+                <span class="text-[11px] font-bold text-gray-500">${type}</span>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-sm text-gray-200 truncate">${name}</span>
+                <span class="block text-[11px] text-gray-500">Type ${type}</span>
+            </span>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (setHelmetSelect) setHelmetSelect.value = typeStr;
+            syncHelmetUiFromSelect();
+            closeHelmetDropdown();
+        });
+
+        frag.appendChild(btn);
+    });
+
+    helmetDropdownList.innerHTML = '';
+    helmetDropdownList.appendChild(frag);
+}
+
+function syncHelmetUiFromSelect() {
+    if (!helmetSelectedLabel || !helmetSelectedImg || !helmetSelectedFallback) return;
+
+    const raw = setHelmetSelect ? String(setHelmetSelect.value || '').trim() : '';
+    if (!raw) {
+        helmetSelectedLabel.textContent = 'Escolha o Helmet';
+        helmetSelectedImg.classList.add('hidden');
+        helmetSelectedImg.src = '';
+        helmetSelectedFallback.textContent = '7';
+        helmetSelectedFallback.classList.remove('hidden');
+        return;
+    }
+
+    const type = parseInt(raw, 10);
+    const name = itemOptions && itemOptions.has(7) && itemOptions.get(7).items.has(type)
+        ? itemOptions.get(7).items.get(type)
+        : `Helmet (Type ${raw})`;
+
+    helmetSelectedLabel.textContent = `${name} (Type ${raw})`;
+    helmetSelectedImg.src = getItemImageUrl(7, raw);
+    helmetSelectedImg.classList.remove('hidden');
+    helmetSelectedFallback.textContent = raw;
+    helmetSelectedFallback.classList.add('hidden');
+
+    helmetSelectedImg.onload = () => {
+        helmetSelectedImg.classList.remove('hidden');
+        helmetSelectedFallback.classList.add('hidden');
+    };
+
+    helmetSelectedImg.onerror = () => {
+        helmetSelectedImg.classList.add('hidden');
+        helmetSelectedFallback.classList.remove('hidden');
+    };
 }
 
 function resolveItemNamesForLoadedBag() {
@@ -905,7 +1078,7 @@ function createRow(item, index) {
         const val = item[col.key] !== undefined ? item[col.key] : 0;
         
         if (col.key === 'SocketProbalty') {
-            const socketVal = `${item.SocketProbalty1},${item.SocketProbalty2},${item.SocketProbalty3},${item.SocketProbalty4},${item.SocketProbalty5}`;
+            const socketVal = `${item.SocketProbalty1 ?? 0},${item.SocketProbalty2 ?? 0},${item.SocketProbalty3 ?? 0},${item.SocketProbalty4 ?? 0},${item.SocketProbalty5 ?? 0}`;
             html += `
                 <td class="text-center">
                     <input type="text" value="${socketVal}" 
@@ -1130,21 +1303,42 @@ function addCommonItem() {
 }
 
 function addFullSet() {
-    const helmetType = parseInt(setHelmetSelect.value);
+    const helmetType = parseInt(setHelmetSelect.value, 10);
     if (isNaN(helmetType)) return;
-    
-    const baseTypes = [helmetType, helmetType + 1, helmetType + 2, helmetType + 3, helmetType + 4]; // Helm, Armor, Pant, Glove, Boot
+
+    const baseType = helmetType;
     const sections = [7, 8, 9, 10, 11];
-    
-    baseTypes.forEach((type, i) => {
-        const newItem = { Section: sections[i], Type: type, Name: 'Set Item' };
-        // Add defaults... (simplified for brevity)
-        if (bagType === 'old') { newItem.MinLevel = 0; newItem.MaxLevel = 0; newItem.Durability = 255; }
-        else { newItem.Level = 0; newItem.Grade = 0; newItem.Durability = 255; }
+
+    sections.forEach((section, offset) => {
+        let type = baseType;
+
+        if (itemOptions && itemOptions.has(section)) {
+            const map = itemOptions.get(section).items;
+            if (map && !map.has(type)) {
+                const altType = baseType + offset;
+                if (map.has(altType)) type = altType;
+            }
+        }
+
+        const newItem = { Section: section, Type: type, Name: 'Set Item' };
+
+        if (bagType === 'old') {
+            newItem.MinLevel = 0; newItem.MaxLevel = 0; newItem.Durability = 255;
+            newItem.Skill = 0; newItem.Luck = 0; newItem.Option = 0;
+            newItem.Excellent = 0; newItem.SetOption = 0; newItem.SocketOption = 0;
+            newItem.SocketProbalty1 = 0; newItem.SocketProbalty2 = 0; newItem.SocketProbalty3 = 0;
+            newItem.SocketProbalty4 = 0; newItem.SocketProbalty5 = 0;
+        } else {
+            newItem.DropGroup = 0; newItem.Level = 0; newItem.Grade = 0;
+            newItem.Durability = 255;
+            newItem.Option0 = 0; newItem.Option1 = 0; newItem.Option2 = 0;
+            newItem.Option3 = 0; newItem.Option4 = 0; newItem.Option5 = 0; newItem.Option6 = 0;
+            newItem.Attribute = 0; newItem.ErrtelOptionLevel = 0; newItem.Duration = 0;
+        }
         
         // Resolve Name
-        if (itemOptions.has(sections[i]) && itemOptions.get(sections[i]).items.has(type)) {
-            newItem.Name = itemOptions.get(sections[i]).items.get(type);
+        if (itemOptions && itemOptions.has(section) && itemOptions.get(section).items.has(type)) {
+            newItem.Name = itemOptions.get(section).items.get(type);
         }
         items.push(newItem);
     });
@@ -1157,6 +1351,8 @@ function addFullSet() {
 }
 
 function closeModal() {
+    closeHelmetDropdown();
+    if (helmetDropdownSearch) helmetDropdownSearch.value = '';
     addModal.classList.add('hidden');
 }
 
