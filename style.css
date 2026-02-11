@@ -122,6 +122,26 @@ input:focus, select:focus {
 }
 
 /* Table */
+.table-scroll-top {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 14px;
+    margin-bottom: 10px;
+}
+
+.table-scroll-top-inner {
+    height: 1px;
+}
+
+.table-scroll-bottom {
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.table-scroll-bottom::-webkit-scrollbar {
+    height: 0;
+}
+
 #itemsTable {
     width: 100%;
     border-collapse: separate;

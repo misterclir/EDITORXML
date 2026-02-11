@@ -11,6 +11,9 @@ const bagStatus = document.getElementById('bagStatus');
 const addDropInfoBtn = document.getElementById('addDropInfoBtn');
 const totalItemsCount = document.getElementById('totalItemsCount');
 const currentBagType = document.getElementById('currentBagType');
+const itemsTableScroll = document.getElementById('itemsTableScroll');
+const itemsTableScrollTop = document.getElementById('itemsTableScrollTop');
+const itemsTableScrollTopInner = document.getElementById('itemsTableScrollTopInner');
 
 // Pagination & State
 let items = [];
@@ -22,6 +25,8 @@ let currentPage = 1;
 const ITEMS_PER_PAGE = 50;
 let currentEditingRowIndex = null;
 let currentModalSection = null;
+
+let isSyncingTableScroll = false;
 
 const CLASSES = ['DW','DK','FE','MG','DL','SU','RF','GL','RW','SL','GC','KM','LM','IK','AL'];
 
@@ -112,6 +117,8 @@ addDropInfoBtn.addEventListener('click', () => {
 });
 document.getElementById('itemSearch').addEventListener('input', (e) => filterModalItems(e.target.value));
 
+initTableHorizontalScrollSync();
+
 // --- File Handling ---
 
 function handleFileUpload(e) {
@@ -170,6 +177,45 @@ function handleFileUpload(e) {
 
 // --- Rendering & Pagination ---
 
+function updateTableHorizontalScrollbar() {
+    if (!itemsTableScroll || !itemsTableScrollTop || !itemsTableScrollTopInner) return;
+
+    const itemsTable = document.getElementById('itemsTable');
+    if (!itemsTable) return;
+
+    const tableWidth = itemsTable.scrollWidth;
+    itemsTableScrollTopInner.style.width = `${tableWidth}px`;
+
+    const hasOverflow = tableWidth > itemsTableScroll.clientWidth + 1;
+    itemsTableScrollTop.classList.toggle('hidden', !hasOverflow);
+
+    if (!hasOverflow) {
+        itemsTableScrollTop.scrollLeft = 0;
+        itemsTableScroll.scrollLeft = 0;
+    }
+}
+
+function initTableHorizontalScrollSync() {
+    if (!itemsTableScroll || !itemsTableScrollTop) return;
+
+    itemsTableScrollTop.addEventListener('scroll', () => {
+        if (isSyncingTableScroll) return;
+        isSyncingTableScroll = true;
+        itemsTableScroll.scrollLeft = itemsTableScrollTop.scrollLeft;
+        isSyncingTableScroll = false;
+    });
+
+    itemsTableScroll.addEventListener('scroll', () => {
+        if (isSyncingTableScroll) return;
+        isSyncingTableScroll = true;
+        itemsTableScrollTop.scrollLeft = itemsTableScroll.scrollLeft;
+        isSyncingTableScroll = false;
+    });
+
+    window.addEventListener('resize', updateTableHorizontalScrollbar);
+    updateTableHorizontalScrollbar();
+}
+
 function updateTableHeaders() {
     if (!bagType) return;
 
@@ -201,6 +247,8 @@ function updateTableHeaders() {
     thAction.style.width = '64px';
     thAction.textContent = 'Ação';
     headerRow.appendChild(thAction);
+
+    updateTableHorizontalScrollbar();
 }
 
 function renderPage() {
@@ -210,6 +258,7 @@ function renderPage() {
 
     if (items.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="100%" class="text-center py-8 text-gray-500">Nenhum item nesta bag.</td></tr>';
+        updateTableHorizontalScrollbar();
         return;
     }
 
@@ -220,6 +269,8 @@ function renderPage() {
         }
     }
     tableBody.appendChild(fragment);
+
+    updateTableHorizontalScrollbar();
 }
 
 function renderPagination() {

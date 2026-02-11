@@ -215,17 +215,23 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table id="itemsTable">
-                    <thead>
-                        <tr id="headerRow">
-                            <!-- JS Injected Headers -->
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800">
-                        <!-- Items -->
-                    </tbody>
-                </table>
+            <div>
+                <div id="itemsTableScrollTop" class="table-scroll-top hidden" aria-hidden="true">
+                    <div id="itemsTableScrollTopInner" class="table-scroll-top-inner"></div>
+                </div>
+
+                <div id="itemsTableScroll" class="overflow-x-auto table-scroll-bottom">
+                    <table id="itemsTable">
+                        <thead>
+                            <tr id="headerRow">
+                                <!-- JS Injected Headers -->
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <!-- Items -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Pagination -->
