@@ -28,32 +28,32 @@ const CLASSES = ['DW','DK','FE','MG','DL','SU','RF','GL','RW','SL','GC','KM','LM
 // Configuração das Colunas
 const COLUMNS_CONFIG = {
     old: [
-        { key: 'MinLevel', label: 'Min\nLevel', width: '7%', type: 'number', min: 0, max: 15 },
-        { key: 'MaxLevel', label: 'Max\nLevel', width: '7%', type: 'number', min: 0, max: 15 },
-        { key: 'Durability', label: 'Durability', width: '7%', type: 'number', min: 0, max: 255 },
-        { key: 'Skill', label: 'Skill', width: '7%', type: 'number', min: 0, max: 1 },
-        { key: 'Luck', label: 'Luck', width: '7%', type: 'number', min: 0, max: 1 },
-        { key: 'Option', label: 'Option', width: '7%', type: 'number', min: 0, max: 7 },
-        { key: 'Excellent', label: 'Excellent', width: '7%', type: 'number', min: 0, max: 63 },
-        { key: 'SetOption', label: 'Set\nOption', width: '7%', type: 'number', min: 0, max: 255 },
-        { key: 'SocketOption', label: 'Socket\nOption', width: '7%', type: 'number', min: 0, max: 255 },
-        { key: 'SocketProbalty', label: 'SocketProb\n1-5 (,)', width: '12%', type: 'text' }
+        { key: 'MinLevel', label: 'Min\nLevel', width: '70px', type: 'number', min: 0, max: 15 },
+        { key: 'MaxLevel', label: 'Max\nLevel', width: '70px', type: 'number', min: 0, max: 15 },
+        { key: 'Durability', label: 'Dura', width: '80px', type: 'number', min: 0, max: 255 },
+        { key: 'Skill', label: 'Skill', width: '60px', type: 'number', min: 0, max: 1 },
+        { key: 'Luck', label: 'Luck', width: '60px', type: 'number', min: 0, max: 1 },
+        { key: 'Option', label: 'Opt', width: '60px', type: 'number', min: 0, max: 7 },
+        { key: 'Excellent', label: 'Exc', width: '70px', type: 'number', min: 0, max: 63 },
+        { key: 'SetOption', label: 'Set\nOpt', width: '70px', type: 'number', min: 0, max: 255 },
+        { key: 'SocketOption', label: 'Sock\nOpt', width: '80px', type: 'number', min: 0, max: 255 },
+        { key: 'SocketProbalty', label: 'SockProb\n1-5', width: '160px', type: 'text' }
     ],
     new: [
-        { key: 'DropGroup', label: 'Drop\nGroup', width: '5%', type: 'number', min: 0, max: 255 },
-        { key: 'Level', label: 'Level', width: '5%', type: 'number', min: 0, max: 15 },
-        { key: 'Grade', label: 'Grade', width: '5%', type: 'number', min: 0, max: 15 },
-        { key: 'Durability', label: 'Dur', width: '5%', type: 'number', min: 0, max: 255 },
-        { key: 'Option0', label: 'Opt0', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option1', label: 'Opt1', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option2', label: 'Opt2', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option3', label: 'Opt3', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option4', label: 'Opt4', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option5', label: 'Opt5', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Option6', label: 'Opt6', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'Attribute', label: 'Attr', width: '4%', type: 'number', min: 0, max: 255 },
-        { key: 'ErrtelOptionLevel', label: 'Errtel\nLvl', width: '5%', type: 'number', min: 0, max: 255 },
-        { key: 'Duration', label: 'Duration', width: '5%', type: 'number', min: 0, max: 2147483647 }
+        { key: 'DropGroup', label: 'Drop\nGroup', width: '70px', type: 'number', min: 0, max: 255 },
+        { key: 'Level', label: 'Level', width: '60px', type: 'number', min: 0, max: 15 },
+        { key: 'Grade', label: 'Grade', width: '60px', type: 'number', min: 0, max: 15 },
+        { key: 'Durability', label: 'Dur', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option0', label: 'Opt0', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option1', label: 'Opt1', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option2', label: 'Opt2', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option3', label: 'Opt3', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option4', label: 'Opt4', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option5', label: 'Opt5', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Option6', label: 'Opt6', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'Attribute', label: 'Attr', width: '60px', type: 'number', min: 0, max: 255 },
+        { key: 'ErrtelOptionLevel', label: 'Errtel\nLvl', width: '80px', type: 'number', min: 0, max: 255 },
+        { key: 'Duration', label: 'Duration', width: '90px', type: 'number', min: 0, max: 2147483647 }
     ]
 };
 
@@ -172,19 +172,24 @@ function handleFileUpload(e) {
 
 function updateTableHeaders() {
     if (!bagType) return;
+
+    const itemsTable = document.getElementById('itemsTable');
+    itemsTable.style.minWidth = bagType === 'new' ? '1320px' : '1100px';
     
     headerRow.innerHTML = '';
     
     // Item Column
     const thItem = document.createElement('th');
-    thItem.className = 'w-[30%] py-4 text-xs whitespace-normal pl-4 text-left font-semibold text-gray-400 uppercase tracking-wider';
+    thItem.className = 'text-[10px] text-left font-semibold text-gray-300 uppercase tracking-wider';
+    thItem.style.width = '360px';
+    thItem.style.paddingLeft = '16px';
     thItem.textContent = 'Item';
     headerRow.appendChild(thItem);
 
     // Dynamic Columns
     COLUMNS_CONFIG[bagType].forEach(col => {
         const th = document.createElement('th');
-        th.className = `py-4 text-xs whitespace-normal px-1 text-center font-semibold text-gray-400 uppercase tracking-wider`;
+        th.className = 'text-[10px] text-center font-semibold text-gray-300 uppercase tracking-wider';
         th.style.width = col.width;
         th.innerHTML = col.label.replace(/\n/g, '<br>');
         headerRow.appendChild(th);
@@ -192,7 +197,8 @@ function updateTableHeaders() {
 
     // Action Column
     const thAction = document.createElement('th');
-    thAction.className = 'w-[5%] py-4 text-xs whitespace-normal text-center font-semibold text-gray-400 uppercase tracking-wider';
+    thAction.className = 'text-[10px] text-center font-semibold text-gray-300 uppercase tracking-wider';
+    thAction.style.width = '64px';
     thAction.textContent = 'Ação';
     headerRow.appendChild(thAction);
 }
@@ -285,14 +291,14 @@ function createRow(item, index) {
 
     // Item Cell (Click to Open Modal)
     let html = `
-        <td class="pl-4 py-2">
+        <td style="padding-left: 16px;">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openItemSelector(${index})">
                 <div class="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                     <i class="fa-solid fa-cube"></i>
                 </div>
                 <div>
-                    <div class="font-medium text-white text-sm group-hover:text-indigo-300 transition-colors">${displayName}</div>
-                    <div class="text-xs text-gray-500">Sec: ${item.Section} (${displaySection}) | Type: ${item.Type}</div>
+                    <div class="font-semibold text-white text-sm leading-snug bag-item-name group-hover:text-indigo-300 transition-colors">${displayName}</div>
+                    <div class="text-[11px] text-gray-500">Sec: ${item.Section} (${displaySection}) | Type: ${item.Type}</div>
                 </div>
             </div>
         </td>
@@ -305,16 +311,16 @@ function createRow(item, index) {
         if (col.key === 'SocketProbalty') {
             const socketVal = `${item.SocketProbalty1},${item.SocketProbalty2},${item.SocketProbalty3},${item.SocketProbalty4},${item.SocketProbalty5}`;
             html += `
-                <td class="px-1">
+                <td class="text-center">
                     <input type="text" value="${socketVal}" 
-                        class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-center text-gray-300 focus:border-indigo-500 focus:outline-none"
+                        class="table-input bg-gray-900 border border-gray-700 rounded text-center text-gray-300 focus:border-indigo-500 focus:outline-none"
                         onchange="updateSockets(${index}, this.value)">
                 </td>`;
         } else {
             html += `
-                <td class="px-1">
+                <td class="text-center">
                     <input type="number" value="${val}" min="${col.min}" max="${col.max}"
-                        class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-center text-gray-300 focus:border-indigo-500 focus:outline-none"
+                        class="table-input bg-gray-900 border border-gray-700 rounded text-center text-gray-300 focus:border-indigo-500 focus:outline-none"
                         onchange="updateField(${index}, '${col.key}', this.value)">
                 </td>`;
         }
