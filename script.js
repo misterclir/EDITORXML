@@ -14,6 +14,26 @@ const currentBagType = document.getElementById('currentBagType');
 const itemsTableScroll = document.getElementById('itemsTableScroll');
 const itemsTableScrollTop = document.getElementById('itemsTableScrollTop');
 const itemsTableScrollTopInner = document.getElementById('itemsTableScrollTopInner');
+const bulkEditBar = document.getElementById('bulkEditBar');
+const bulkSelectedCount = document.getElementById('bulkSelectedCount');
+const bulkEditOpenBtn = document.getElementById('bulkEditOpenBtn');
+const bulkClearSelectionBtn = document.getElementById('bulkClearSelectionBtn');
+const bulkEditModal = document.getElementById('bulkEditModal');
+const bulkFields = document.getElementById('bulkFields');
+const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+const bulkApplyBtn = document.getElementById('bulkApplyBtn');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+const navBagEditor = document.getElementById('navBagEditor');
+const navSettings = document.getElementById('navSettings');
+const pageEditor = document.getElementById('pageEditor');
+const pageSettings = document.getElementById('pageSettings');
+const pageTitle = document.getElementById('pageTitle');
+const pageSubtitle = document.getElementById('pageSubtitle');
+const uploadItemXml = document.getElementById('uploadItemXml');
+const settingsItemXmlStatus = document.getElementById('settingsItemXmlStatus');
+const clearItemXmlCacheBtn = document.getElementById('clearItemXmlCacheBtn');
+const itemListStatus = document.getElementById('itemListStatus');
 
 // Pagination & State
 let items = [];
@@ -27,6 +47,9 @@ let currentEditingRowIndex = null;
 let currentModalSection = null;
 
 let isSyncingTableScroll = false;
+
+const selectedRowIndices = new Set();
+let selectionAnchorIndex = null;
 
 const CLASSES = ['DW','DK','FE','MG','DL','SU','RF','GL','RW','SL','GC','KM','LM','IK','AL'];
 
@@ -64,47 +87,6 @@ const COLUMNS_CONFIG = {
 
 // --- Initialization ---
 
-fetch('Item.xml')
-    .then(response => {
-        if (!response.ok) throw new Error('Item.xml não encontrado');
-        return response.text();
-    })
-    .then(text => {
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "application/xml");
-        const sections = xmlDoc.querySelectorAll('Section');
-
-        if (sections.length === 0) throw new Error('Nenhuma seção encontrada no Item.xml');
-
-        sections.forEach(sec => {
-            const secIndex = parseInt(sec.getAttribute('Index') || '0');
-            const secName = sec.getAttribute('Name') || 'Sem nome';
-            
-            if (!itemOptions.has(secIndex)) itemOptions.set(secIndex, { name: secName, items: new Map() });
-
-            sec.querySelectorAll('Item').forEach(itemNode => {
-                const type = parseInt(itemNode.getAttribute('Index') || '0');
-                const name = itemNode.getAttribute('Name') || 'Sem nome';
-                itemOptions.get(secIndex).items.set(type, name);
-            });
-        });
-
-        // Populate Helmet select for "Full Set" feature
-        if (itemOptions.has(7)) {
-            setHelmetSelect.innerHTML = '<option value="">Escolha o Helmet</option>';
-            itemOptions.get(7).items.forEach((name, type) => {
-                setHelmetSelect.innerHTML += `<option value="${type}">${name} (Type ${type})</option>`;
-            });
-        }
-
-        document.getElementById('itemListStatus').innerHTML = '<div class="text-green-400 font-medium">Item.xml carregado!</div>';
-        
-        // Init Modal Sections once
-        renderModalSections();
-    })
-    .catch(err => {
-        document.getElementById('itemListStatus').innerHTML = `<div class="text-red-400 font-medium">${err.message}</div>`;
-    });
 
 // --- Event Listeners ---
 
@@ -117,7 +99,315 @@ addDropInfoBtn.addEventListener('click', () => {
 });
 document.getElementById('itemSearch').addEventListener('input', (e) => filterModalItems(e.target.value));
 
+if (bulkEditOpenBtn) bulkEditOpenBtn.addEventListener('click', () => openBulkEditModal());
+if (bulkClearSelectionBtn) bulkClearSelectionBtn.addEventListener('click', clearSelection);
+if (bulkCancelBtn) bulkCancelBtn.addEventListener('click', closeBulkEditModal);
+if (bulkApplyBtn) bulkApplyBtn.addEventListener('click', applyBulkEdit);
+
 initTableHorizontalScrollSync();
+
+initApp();
+
+function initApp() {
+    initSidebarBehavior();
+    initNavigation();
+    initItemXmlSettings();
+    loadItemXmlFromCache();
+    updateBulkBar();
+}
+
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 1024px)').matches;
+}
+
+function setSidebarHidden(isHidden) {
+    document.body.classList.toggle('sidebar-hidden', isHidden);
+}
+
+function toggleSidebar() {
+    const nextHidden = !document.body.classList.contains('sidebar-hidden');
+    setSidebarHidden(nextHidden);
+    try {
+        localStorage.setItem('sidebarHidden', String(nextHidden));
+    } catch (_) {}
+}
+
+function initSidebarBehavior() {
+    let initialHidden = isMobileViewport();
+    try {
+        const saved = localStorage.getItem('sidebarHidden');
+        if (saved === 'true') initialHidden = true;
+        if (saved === 'false') initialHidden = false;
+    } catch (_) {}
+
+    setSidebarHidden(initialHidden);
+
+    if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => setSidebarHidden(true));
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (document.body.classList.contains('sidebar-hidden')) return;
+        if (!isMobileViewport()) return;
+        setSidebarHidden(true);
+    });
+}
+
+function setActivePage(pageKey) {
+    if (pageEditor) pageEditor.classList.toggle('hidden', pageKey !== 'editor');
+    if (pageSettings) pageSettings.classList.toggle('hidden', pageKey !== 'settings');
+
+    if (navBagEditor) navBagEditor.classList.toggle('active', pageKey === 'editor');
+    if (navSettings) navSettings.classList.toggle('active', pageKey === 'settings');
+
+    if (pageTitle && pageSubtitle) {
+        if (pageKey === 'settings') {
+            pageTitle.textContent = 'Settings';
+            pageSubtitle.textContent = 'Gerencie o Item.xml e preferências do editor.';
+        } else {
+            pageTitle.textContent = 'Event Bag Editor';
+            pageSubtitle.textContent = 'Gerencie drops e configurações de bags facilmente.';
+        }
+    }
+
+    if (downloadButton) downloadButton.classList.toggle('hidden', pageKey !== 'editor');
+
+    if (isMobileViewport()) setSidebarHidden(true);
+}
+
+function initNavigation() {
+    if (navBagEditor) navBagEditor.addEventListener('click', () => setActivePage('editor'));
+    if (navSettings) navSettings.addEventListener('click', () => setActivePage('settings'));
+    setActivePage('editor');
+}
+
+const ITEMXML_DB_NAME = 'mudevs-bag-editor';
+const ITEMXML_DB_VERSION = 1;
+const ITEMXML_STORE = 'files';
+const ITEMXML_KEY = 'Item.xml';
+
+function openItemXmlDb() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(ITEMXML_DB_NAME, ITEMXML_DB_VERSION);
+        req.onerror = () => reject(req.error);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(ITEMXML_STORE)) {
+                db.createObjectStore(ITEMXML_STORE, { keyPath: 'name' });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+    });
+}
+
+async function idbGetFile(name) {
+    const db = await openItemXmlDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(ITEMXML_STORE, 'readonly');
+        const store = tx.objectStore(ITEMXML_STORE);
+        const req = store.get(name);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result || null);
+    });
+}
+
+async function idbPutFile(record) {
+    const db = await openItemXmlDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(ITEMXML_STORE, 'readwrite');
+        const store = tx.objectStore(ITEMXML_STORE);
+        const req = store.put(record);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve();
+    });
+}
+
+async function idbDeleteFile(name) {
+    const db = await openItemXmlDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(ITEMXML_STORE, 'readwrite');
+        const store = tx.objectStore(ITEMXML_STORE);
+        const req = store.delete(name);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve();
+    });
+}
+
+function setHtmlStatus(el, html) {
+    if (!el) return;
+    el.innerHTML = html;
+}
+
+function formatPtDate(value) {
+    try {
+        return new Date(value).toLocaleString('pt-BR');
+    } catch (_) {
+        return '';
+    }
+}
+
+function parseItemXmlText(text) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, 'application/xml');
+    if (xmlDoc.querySelector('parsererror')) throw new Error('XML inválido');
+
+    const sections = xmlDoc.querySelectorAll('Section');
+    if (sections.length === 0) throw new Error('Nenhuma seção encontrada no Item.xml');
+
+    const nextOptions = new Map();
+    let itemsCount = 0;
+
+    sections.forEach(sec => {
+        const secIndex = parseInt(sec.getAttribute('Index') || '0');
+        const secName = sec.getAttribute('Name') || 'Sem nome';
+
+        if (!nextOptions.has(secIndex)) nextOptions.set(secIndex, { name: secName, items: new Map() });
+
+        sec.querySelectorAll('Item').forEach(itemNode => {
+            const type = parseInt(itemNode.getAttribute('Index') || '0');
+            const name = itemNode.getAttribute('Name') || 'Sem nome';
+            nextOptions.get(secIndex).items.set(type, name);
+            itemsCount += 1;
+        });
+    });
+
+    return { options: nextOptions, sectionsCount: sections.length, itemsCount };
+}
+
+function populateHelmetSelect() {
+    if (!setHelmetSelect) return;
+    if (!itemOptions || itemOptions.size === 0) {
+        setHelmetSelect.innerHTML = '';
+        return;
+    }
+
+    if (itemOptions.has(7)) {
+        setHelmetSelect.innerHTML = '<option value="">Escolha o Helmet</option>';
+        itemOptions.get(7).items.forEach((name, type) => {
+            setHelmetSelect.innerHTML += `<option value="${type}">${name} (Type ${type})</option>`;
+        });
+    } else {
+        setHelmetSelect.innerHTML = '';
+    }
+}
+
+function resolveItemNamesForLoadedBag() {
+    if (!items || items.length === 0) return;
+    if (!itemOptions || itemOptions.size === 0) return;
+
+    let changed = false;
+    items.forEach(item => {
+        if (!item) return;
+        if (!itemOptions.has(item.Section)) return;
+        const nameMap = itemOptions.get(item.Section).items;
+        if (!nameMap.has(item.Type)) return;
+        const nextName = nameMap.get(item.Type);
+        if (item.Name !== nextName) {
+            item.Name = nextName;
+            changed = true;
+        }
+    });
+
+    if (changed) renderPage();
+}
+
+function applyItemXmlText(text, meta = {}) {
+    const parsed = parseItemXmlText(text);
+    itemOptions = parsed.options;
+    populateHelmetSelect();
+    renderModalSections();
+    resolveItemNamesForLoadedBag();
+
+    const when = meta.savedAt ? ` • Cache: ${formatPtDate(meta.savedAt)}` : '';
+    const details = `${parsed.sectionsCount} seções • ${parsed.itemsCount} itens${when}`;
+
+    setHtmlStatus(itemListStatus, `<div class="text-green-400 font-medium">Item.xml pronto!</div><div class="text-xs text-gray-500 mt-1">${details}</div>`);
+    setHtmlStatus(settingsItemXmlStatus, `<div class="text-green-400 font-medium">Item.xml em cache</div><div class="text-xs text-gray-500 mt-1">${details}</div>`);
+}
+
+function setItemXmlMissingUi() {
+    itemOptions = new Map();
+    populateHelmetSelect();
+    renderModalSections();
+    setHtmlStatus(itemListStatus, '<div class="text-yellow-400 font-medium">Item.xml não carregado. Envie em Settings.</div>');
+    setHtmlStatus(settingsItemXmlStatus, '<div class="text-yellow-400 font-medium">Nenhum Item.xml em cache.</div>');
+}
+
+function setItemXmlErrorUi(message) {
+    itemOptions = new Map();
+    populateHelmetSelect();
+    renderModalSections();
+    setHtmlStatus(itemListStatus, `<div class="text-red-400 font-medium">${message}</div>`);
+    setHtmlStatus(settingsItemXmlStatus, `<div class="text-red-400 font-medium">${message}</div>`);
+}
+
+async function loadItemXmlFromCache() {
+    setHtmlStatus(itemListStatus, '<div class="text-gray-400">Carregando Item.xml do cache...</div>');
+    setHtmlStatus(settingsItemXmlStatus, '<div class="text-gray-400">Carregando Item.xml do cache...</div>');
+
+    try {
+        const record = await idbGetFile(ITEMXML_KEY);
+        if (!record || !record.text) {
+            setItemXmlMissingUi();
+            return;
+        }
+
+        applyItemXmlText(record.text, { savedAt: record.savedAt, originalName: record.originalName });
+    } catch (e) {
+        setItemXmlErrorUi('Falha ao ler o cache do Item.xml');
+    }
+}
+
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(reader.error);
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.readAsText(file);
+    });
+}
+
+function initItemXmlSettings() {
+    if (uploadItemXml) {
+        uploadItemXml.addEventListener('change', handleItemXmlUpload);
+    }
+    if (clearItemXmlCacheBtn) {
+        clearItemXmlCacheBtn.addEventListener('click', clearItemXmlCache);
+    }
+}
+
+async function handleItemXmlUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    try {
+        setHtmlStatus(settingsItemXmlStatus, '<div class="text-gray-400">Lendo arquivo...</div>');
+        const text = await readFileAsText(file);
+        applyItemXmlText(text, { savedAt: Date.now(), originalName: file.name });
+        await idbPutFile({
+            name: ITEMXML_KEY,
+            originalName: file.name,
+            text,
+            savedAt: Date.now(),
+            size: text.length
+        });
+
+        if (isMobileViewport()) setSidebarHidden(true);
+    } catch (err) {
+        setItemXmlErrorUi(err && err.message ? err.message : 'Falha ao processar Item.xml');
+    } finally {
+        if (uploadItemXml) uploadItemXml.value = '';
+    }
+}
+
+async function clearItemXmlCache() {
+    try {
+        await idbDeleteFile(ITEMXML_KEY);
+    } catch (_) {}
+
+    closeItemSelector();
+    setItemXmlMissingUi();
+}
 
 // --- File Handling ---
 
@@ -137,6 +427,8 @@ function handleFileUpload(e) {
 
             items = [];
             dropInfos = [];
+            selectedRowIndices.clear();
+            selectionAnchorIndex = null;
             tableBody.innerHTML = '';
             sectionOldConfig.classList.add('hidden');
             sectionNewConfig.classList.add('hidden');
@@ -163,6 +455,8 @@ function handleFileUpload(e) {
             updateTableHeaders();
             renderPage();
             renderPagination();
+
+            updateBulkBar();
             
             bagStatus.innerHTML = '<div class="text-green-400 font-medium">Arquivo carregado com sucesso!</div>';
         } catch (error) {
@@ -216,13 +510,228 @@ function initTableHorizontalScrollSync() {
     updateTableHorizontalScrollbar();
 }
 
+function getCurrentPageRowIndices() {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = Math.min(start + ITEMS_PER_PAGE, items.length);
+    const indices = [];
+    for (let i = start; i < end; i++) {
+        if (items[i]) indices.push(i);
+    }
+    return indices;
+}
+
+function updateSelectAllCheckboxState() {
+    const selectAll = document.getElementById('selectAllRows');
+    if (!selectAll) return;
+
+    const indices = getCurrentPageRowIndices();
+    if (indices.length === 0) {
+        selectAll.indeterminate = false;
+        selectAll.checked = false;
+        return;
+    }
+
+    const selectedCount = indices.reduce((acc, i) => acc + (selectedRowIndices.has(i) ? 1 : 0), 0);
+    selectAll.checked = selectedCount === indices.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < indices.length;
+}
+
+function toggleRowSelection(index, isSelected) {
+    if (isSelected) selectedRowIndices.add(index);
+    else selectedRowIndices.delete(index);
+    updateSelectAllCheckboxState();
+    updateBulkBar();
+}
+
+function handleRowCheckboxClick(event, index) {
+    const desired = event.target.checked;
+
+    if (event.shiftKey && selectionAnchorIndex !== null) {
+        const a = Math.min(selectionAnchorIndex, index);
+        const b = Math.max(selectionAnchorIndex, index);
+
+        for (let i = a; i <= b; i++) {
+            if (!items[i]) continue;
+            if (desired) selectedRowIndices.add(i);
+            else selectedRowIndices.delete(i);
+        }
+
+        renderPage();
+    } else {
+        toggleRowSelection(index, desired);
+    }
+
+    selectionAnchorIndex = index;
+}
+
+function toggleSelectAllCurrentPage(isSelected) {
+    getCurrentPageRowIndices().forEach(i => {
+        if (isSelected) selectedRowIndices.add(i);
+        else selectedRowIndices.delete(i);
+    });
+    selectionAnchorIndex = null;
+    renderPage();
+}
+
+function clearSelection() {
+    selectedRowIndices.clear();
+    selectionAnchorIndex = null;
+    renderPage();
+}
+
+function updateBulkBar() {
+    if (!bulkEditBar || !bulkSelectedCount) return;
+    const count = selectedRowIndices.size;
+    bulkSelectedCount.textContent = String(count);
+    bulkEditBar.classList.toggle('hidden', count === 0);
+}
+
+function openBulkEditModal(focusKey = null) {
+    if (!bulkEditModal) return;
+    if (!bagType) return;
+
+    renderBulkFields();
+    clearBulkInputs();
+    bulkEditModal.classList.remove('hidden');
+
+    if (focusKey) {
+        setTimeout(() => {
+            const input = document.getElementById(`bulk_${focusKey}`);
+            if (!input) return;
+            input.focus();
+            if (typeof input.select === 'function') input.select();
+        }, 0);
+    }
+}
+
+function closeBulkEditModal() {
+    if (!bulkEditModal) return;
+    bulkEditModal.classList.add('hidden');
+}
+
+function clearBulkInputs() {
+    if (!bulkFields) return;
+    bulkFields.querySelectorAll('input').forEach(input => {
+        if (input.type === 'checkbox' || input.type === 'radio') return;
+        input.value = '';
+    });
+}
+
+function renderBulkFields() {
+    if (!bulkFields) return;
+    if (!bagType) return;
+
+    bulkFields.innerHTML = '';
+
+    COLUMNS_CONFIG[bagType].forEach(col => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-1';
+        wrapper.dataset.key = col.key;
+
+        const label = document.createElement('label');
+        label.className = 'block text-xs font-medium text-gray-400';
+        label.textContent = col.label.replace(/\n/g, ' ');
+
+        const input = document.createElement('input');
+        input.id = `bulk_${col.key}`;
+        input.type = col.type;
+        input.placeholder = 'Manter';
+        input.className = 'w-full px-3 py-2 text-sm';
+
+        if (col.type === 'number') {
+            if (Number.isFinite(col.min)) input.min = String(col.min);
+            if (Number.isFinite(col.max)) input.max = String(col.max);
+        }
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        bulkFields.appendChild(wrapper);
+    });
+}
+
+function getBulkTargetMode() {
+    const checked = document.querySelector('input[name="bulkTarget"]:checked');
+    return checked ? checked.value : 'selected';
+}
+
+function getBulkTargetIndices(mode) {
+    if (mode === 'all') {
+        const indices = [];
+        for (let i = 0; i < items.length; i++) {
+            if (items[i]) indices.push(i);
+        }
+        return indices;
+    }
+
+    if (mode === 'page') {
+        return getCurrentPageRowIndices();
+    }
+
+    return Array.from(selectedRowIndices);
+}
+
+function applyBulkEdit() {
+    if (!bagType) return;
+    const targetMode = getBulkTargetMode();
+    const indices = getBulkTargetIndices(targetMode);
+    if (indices.length === 0) return;
+
+    const apply = [];
+    COLUMNS_CONFIG[bagType].forEach(col => {
+        const input = document.getElementById(`bulk_${col.key}`);
+        if (!input) return;
+
+        const raw = String(input.value ?? '').trim();
+        if (raw === '') return;
+
+        if (col.key === 'SocketProbalty') {
+            apply.push({ key: col.key, value: raw, type: 'socket' });
+            return;
+        }
+
+        if (col.type === 'number') {
+            let num = Number(raw);
+            if (!Number.isFinite(num)) return;
+            if (Number.isFinite(col.min)) num = Math.max(col.min, num);
+            if (Number.isFinite(col.max)) num = Math.min(col.max, num);
+            apply.push({ key: col.key, value: num, type: 'number' });
+            return;
+        }
+
+        apply.push({ key: col.key, value: raw, type: 'text' });
+    });
+
+    if (apply.length === 0) return;
+
+    indices.forEach(i => {
+        if (!items[i]) return;
+        apply.forEach(change => {
+            if (change.type === 'socket') {
+                updateSockets(i, change.value);
+                return;
+            }
+            items[i][change.key] = change.value;
+        });
+    });
+
+    renderPage();
+    renderPagination();
+    closeBulkEditModal();
+}
+
 function updateTableHeaders() {
     if (!bagType) return;
 
     const itemsTable = document.getElementById('itemsTable');
-    itemsTable.style.minWidth = bagType === 'new' ? '1320px' : '1100px';
+    itemsTable.style.minWidth = bagType === 'new' ? '1376px' : '1156px';
     
     headerRow.innerHTML = '';
+
+    const thSelect = document.createElement('th');
+    thSelect.className = 'text-[10px] text-center font-semibold text-gray-300 uppercase tracking-wider';
+    thSelect.style.width = '56px';
+    thSelect.innerHTML = '<input id="selectAllRows" type="checkbox" class="rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500" aria-label="Selecionar todos na página">';
+    headerRow.appendChild(thSelect);
     
     // Item Column
     const thItem = document.createElement('th');
@@ -235,9 +744,14 @@ function updateTableHeaders() {
     // Dynamic Columns
     COLUMNS_CONFIG[bagType].forEach(col => {
         const th = document.createElement('th');
-        th.className = 'text-[10px] text-center font-semibold text-gray-300 uppercase tracking-wider';
+        th.className = 'text-[10px] text-center font-semibold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white';
         th.style.width = col.width;
         th.innerHTML = col.label.replace(/\n/g, '<br>');
+        th.title = 'Clique para editar essa coluna em massa';
+        th.addEventListener('click', () => {
+            if (selectedRowIndices.size === 0) return;
+            openBulkEditModal(col.key);
+        });
         headerRow.appendChild(th);
     });
 
@@ -247,6 +761,12 @@ function updateTableHeaders() {
     thAction.style.width = '64px';
     thAction.textContent = 'Ação';
     headerRow.appendChild(thAction);
+
+    const selectAll = document.getElementById('selectAllRows');
+    if (selectAll) {
+        selectAll.addEventListener('change', (e) => toggleSelectAllCurrentPage(e.target.checked));
+        updateSelectAllCheckboxState();
+    }
 
     updateTableHorizontalScrollbar();
 }
@@ -259,6 +779,8 @@ function renderPage() {
     if (items.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="100%" class="text-center py-8 text-gray-500">Nenhum item nesta bag.</td></tr>';
         updateTableHorizontalScrollbar();
+        updateSelectAllCheckboxState();
+        updateBulkBar();
         return;
     }
 
@@ -271,6 +793,9 @@ function renderPage() {
     tableBody.appendChild(fragment);
 
     updateTableHorizontalScrollbar();
+
+    updateSelectAllCheckboxState();
+    updateBulkBar();
 }
 
 function renderPagination() {
@@ -340,8 +865,16 @@ function createRow(item, index) {
         displaySection = itemOptions.get(item.Section).name;
     }
 
-    // Item Cell (Click to Open Modal)
+    const isSelected = selectedRowIndices.has(index);
+
     let html = `
+        <td class="text-center">
+            <input type="checkbox" ${isSelected ? 'checked' : ''}
+                class="rounded bg-gray-700 border-gray-600 text-indigo-500 focus:ring-indigo-500"
+                aria-label="Selecionar item"
+                onclick="handleRowCheckboxClick(event, ${index})">
+        </td>
+
         <td style="padding-left: 16px;">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openItemSelector(${index})">
                 <div class="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
@@ -409,6 +942,15 @@ function updateSockets(index, value) {
 function removeRow(index) {
     if(confirm('Remover este item?')) {
         items.splice(index, 1);
+
+        const nextSelected = new Set();
+        selectedRowIndices.forEach(i => {
+            if (i === index) return;
+            nextSelected.add(i > index ? i - 1 : i);
+        });
+        selectedRowIndices.clear();
+        nextSelected.forEach(i => selectedRowIndices.add(i));
+
         renderPage();
         renderPagination();
         totalItemsCount.textContent = items.length;
@@ -497,6 +1039,11 @@ function filterModalItems(term) {
 }
 
 function openItemSelector(rowIndex) {
+    if (!itemOptions || itemOptions.size === 0) {
+        setActivePage('settings');
+        return;
+    }
+
     currentEditingRowIndex = rowIndex;
     document.getElementById('itemSelectorModal').classList.remove('hidden');
     

@@ -45,6 +45,15 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 40;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: none;
+    z-index: 35;
 }
 
 .sidebar-link {
@@ -68,6 +77,25 @@ body {
     margin-left: 280px;
     padding: 32px;
     min-height: 100vh;
+    transition: margin-left 0.2s ease;
+}
+
+body.sidebar-hidden .sidebar {
+    transform: translateX(-100%);
+}
+
+body.sidebar-hidden .main-content {
+    margin-left: 0;
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0;
+    }
+
+    body:not(.sidebar-hidden) .sidebar-overlay {
+        display: block;
+    }
 }
 
 /* Cards */
