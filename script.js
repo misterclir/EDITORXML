@@ -246,6 +246,13 @@ function formatPtDate(value) {
     }
 }
 
+function getItemImageUrl(section, type) {
+    const s = String(section ?? '').trim();
+    const t = String(type ?? '').trim();
+    if (!s || !t) return '';
+    return `Item/${encodeURIComponent(s)}/${encodeURIComponent(t)}.png`;
+}
+
 function parseItemXmlText(text) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(text, 'application/xml');
@@ -867,6 +874,8 @@ function createRow(item, index) {
 
     const isSelected = selectedRowIndices.has(index);
 
+    const itemImgUrl = getItemImageUrl(item.Section, item.Type);
+
     let html = `
         <td class="text-center">
             <input type="checkbox" ${isSelected ? 'checked' : ''}
@@ -877,8 +886,11 @@ function createRow(item, index) {
 
         <td style="padding-left: 16px;">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openItemSelector(${index})">
-                <div class="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                    <i class="fa-solid fa-cube"></i>
+                <div class="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center overflow-hidden group-hover:bg-indigo-500 transition-colors">
+                    <img src="${itemImgUrl}" alt="" class="w-full h-full object-contain p-1" loading="lazy"
+                        onload="this.nextElementSibling.classList.add('hidden')"
+                        onerror="this.classList.add('hidden')">
+                    <i class="fa-solid fa-cube text-indigo-400 group-hover:text-white transition-colors"></i>
                 </div>
                 <div>
                     <div class="font-semibold text-white text-sm leading-snug bag-item-name group-hover:text-indigo-300 transition-colors">${displayName}</div>
@@ -1013,9 +1025,14 @@ function loadSectionItems(secIndex, elementBtn = null) {
         card.dataset.name = name.toLowerCase();
         card.onclick = () => selectItemFromModal(secIndex, type, name);
 
+        const imgUrl = getItemImageUrl(secIndex, type);
+
         card.innerHTML = `
-            <div class="w-10 h-10 rounded bg-gray-900 flex items-center justify-center text-gray-500 group-hover:text-indigo-400">
-                 <span class="text-xs font-bold">${type}</span>
+            <div class="w-12 h-12 rounded bg-gray-900 flex items-center justify-center overflow-hidden">
+                <img src="${imgUrl}" alt="" class="w-full h-full object-contain p-1" loading="lazy"
+                    onload="this.nextElementSibling.classList.add('hidden')"
+                    onerror="this.classList.add('hidden')">
+                <span class="text-xs font-bold text-gray-500 group-hover:text-indigo-400">${type}</span>
             </div>
             <div class="text-xs text-gray-300 group-hover:text-white font-medium line-clamp-2">${name}</div>
         `;
